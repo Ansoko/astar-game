@@ -6,28 +6,37 @@ using UnityEngine;
 public class astar : MonoBehaviour
 {
 
-    const int inf = int.MaxValue; //infini
-
     void Start()
     {
         float[,,] grille = new float[10, 10, 1]; //distance depuis méchant
         Array.Clear(grille, 0, grille.Length);
-        //-1 représente les obstacles
-        grille[2, 3, 0] = inf;
-        grille[2, 4, 0] = inf;
-        grille[2, 5, 0] = inf;
-        grille[2, 6, 0] = inf;
-        grille[2, 7, 0] = inf;
-        grille[2, 8, 0] = inf;
-        grille[5, 4, 0] = inf;
-        grille[6, 4, 0] = inf;
-        grille[7, 4, 0] = inf;
-        grille[8, 4, 0] = inf;
-        Vector3 posGentil = new Vector3(2, 2,0); // x, y, cout
-        Vector3 posMechant = new Vector3(7, 7, 0);
-        algoastar(grille, posMechant, posGentil);
+        //int.MaxValue représente les obstacles
+        grille[3, 0, 0] = int.MaxValue;
+        grille[3, 1, 0] = int.MaxValue;
+        grille[3, 2, 0] = int.MaxValue;
+        grille[3, 3, 0] = int.MaxValue;
+        grille[3, 4, 0] = int.MaxValue;
+        grille[3, 5, 0] = int.MaxValue;
 
-        Debug.Log("test");
+        grille[1, 8, 0] = int.MaxValue;
+        grille[2, 8, 0] = int.MaxValue;
+        grille[3, 8, 0] = int.MaxValue;
+        grille[4, 8, 0] = int.MaxValue;
+
+        grille[5, 8, 0] = int.MaxValue;
+        grille[5, 7, 0] = int.MaxValue;
+        grille[5, 6, 0] = int.MaxValue;
+
+        grille[6, 6, 0] = int.MaxValue;
+        grille[7, 6, 0] = int.MaxValue;
+        grille[8, 6, 0] = int.MaxValue;
+
+        grille[2, 9, 0] = int.MaxValue;
+
+        Vector3 posGentil = new Vector3(2, 2,0);
+        Vector3 posMechant = new Vector3(7, 7, 0);
+        algoastar(grille, posMechant, posGentil); //méchant vers gentil
+
     }
 
     // Update is called once per frame
@@ -36,47 +45,60 @@ public class astar : MonoBehaviour
         
     }
 
-	public void algoastar (float[,,] grille, Vector3 d, Vector3 a)
+	public List<Vector3> algoastar (float[,,] grille, Vector3 d, Vector3 a)
     {
-
-        Vector3 depart = new Vector3(d.x, d.y, 0);
-        Vector3 arrivee = new Vector3(a.x, a.y, 0);
         List<Vector3> listeouverte = new List<Vector3>(); //contient les positions encore à analyser
         List<Vector3> listefermee = new List<Vector3>(); // contient les voisins vérifiés, qui n'ont plus à être analysé
-        float[,,] cout = grille;
+        float[,,] cout = (float[,,])grille.Clone();
+        Vector3[,,] predecesseur = new Vector3[10,10,1];
 
-        listeouverte.Add(depart);
+        listeouverte.Add(d);
 		while (listeouverte.Count>0)
 		{
             //on prend la plus petite valeur dans la liste ouverte
             Vector3 lowest = lowestPrice(listeouverte, cout);
-            Debug.Log(cout[(int)lowest.x, (int)lowest.y, (int)lowest.z]);
             //on déplace cette valeur dans la liste fermée
             listefermee.Add(lowest);
             listeouverte.Remove(lowest);
             //si cette valeur est la valeur d'arrivée, l'algo est terminé
-            if (lowest == arrivee)
+            if (lowest == a)
             {
+                Debug.Log(grille[(int)lowest.x, (int)lowest.y, (int)lowest.z]);
                 break;
-            }            //pour toutes les positions adjacentes :
+            }
+            //pour toutes les positions adjacentes :
             for (int i = -1; i <= 1; i++)
 			{
 				for (int j = -1; j <= 1; j++)
 				{
+                    if (lowest.x + i >= grille.GetLength(0)) { continue; }
+                    if (lowest.y + j >= grille.GetLength(1)) { continue; }
+                    if (lowest.x - i < 0) { continue; }
+                    if (lowest.y - j < 0) { continue; }
                     Vector3 temp = new Vector3(lowest.x + i, lowest.y + j, lowest.z);
-                    if (!listeouverte.Contains(temp) && !listefermee.Contains(temp) && (grille[(int)lowest.x + i, (int)lowest.y + j, (int)lowest.z] != inf))
+                    if (!listeouverte.Contains(temp) && !listefermee.Contains(temp) && (grille[(int)lowest.x + i, (int)lowest.y + j, (int)lowest.z] != int.MaxValue))
                     {
                         listeouverte.Add(temp);
-                        grille[(int)lowest.x + i, (int)lowest.y + j, (int)lowest.z]++;
-                        cout[(int)lowest.x + i, (int)lowest.y + j, (int)lowest.z] = grille[(int)lowest.x + i, (int)lowest.y + j, (int)lowest.z] + distancevoloiseau(temp, a);
+                        grille[(int)lowest.x + i, (int)lowest.y + j, (int)lowest.z] = grille[(int)lowest.x, (int)lowest.y, (int)lowest.z] + 1; //nombre de déplacement 
+                        cout[(int)lowest.x + i, (int)lowest.y + j, (int)lowest.z] = grille[(int)lowest.x + i, (int)lowest.y + j, (int)lowest.z] + distancevoloiseau(temp, a); //cout jusquà la position
+                        predecesseur[(int)lowest.x + i, (int)lowest.y + j, (int)lowest.z] = lowest;
                     }
                 }
 			}
-			
         }
-        Debug.Log(cout[(int)arrivee.x, (int)arrivee.y, (int)arrivee.z]);
 
+        //list des sommets du chemin le plus court
+        List<Vector3> shortestPath = new List<Vector3>();
+        Vector3 current = a;
+        while (current != d)
+        {
+            shortestPath.Add(current);
+            current = predecesseur[(int)current.x, (int)current.y, (int)current.z];
+        }
+        shortestPath.Reverse();
+        return shortestPath;
     }
+
     private Vector3 lowestPrice(List<Vector3> list, float [,,] grille) //point de la liste avec le poids le plus faible
     {
 		try
@@ -98,13 +120,13 @@ public class astar : MonoBehaviour
         }
 		catch (System.Exception)
 		{
-            Debug.Log("liste ouverte vide !!");
+            Debug.Log("liste ouverte vide ou pas de cout !!");
 			throw;
 		}
         
     }
 
-    private float distancevoloiseau(Vector3 v1, Vector3 v2) {
-        return (float)Math.Sqrt((v2.x - v1.x) * (v2.x - v1.x)) + ((v2.y - v1.y) * (v2.y - v1.y)) + ((v2.z - v1.z) * (v2.z - v1.z));
+    private float distancevoloiseau(Vector3 v2, Vector3 v1) {
+        return (float)Math.Sqrt(((v2.x - v1.x) * (v2.x - v1.x)) + ((v2.y - v1.y) * (v2.y - v1.y)) + ((v2.z - v1.z) * (v2.z - v1.z)));
     }
 }

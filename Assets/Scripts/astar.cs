@@ -1,60 +1,118 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.UI;
+
 
 public class astar : MonoBehaviour
 {
+    public GameObject joueur;
+    public List<GameObject> murs;
+    public GameObject test;
+    public Text gameover;
 
-    void Start()
+    //a*
+    private float[,,] grilleBase;
+    private float[,,] cout;
+    List<Vector3> route = new List<Vector3>(); //plan de route
+
+    public deplacement jr; //script joueur
+
+	void Start()
     {
-        float[,,] grille = new float[10, 10, 1]; //distance depuis méchant
-        Array.Clear(grille, 0, grille.Length);
-        //int.MaxValue représente les obstacles
-        grille[3, 0, 0] = int.MaxValue;
-        grille[3, 1, 0] = int.MaxValue;
-        grille[3, 2, 0] = int.MaxValue;
-        grille[3, 3, 0] = int.MaxValue;
-        grille[3, 4, 0] = int.MaxValue;
-        grille[3, 5, 0] = int.MaxValue;
+        jr = joueur.GetComponent<deplacement>();
+        grilleBase = new float[50, 50, 1]; //distance depuis méchant
+        Array.Clear(grilleBase, 0, grilleBase.Length);
 
-        grille[1, 8, 0] = int.MaxValue;
-        grille[2, 8, 0] = int.MaxValue;
-        grille[3, 8, 0] = int.MaxValue;
-        grille[4, 8, 0] = int.MaxValue;
+		for (int i = 0; i < 50; i++)
+		{
+			for (int j = 0; j < 50; j++)
+			{
+				foreach (var obj in murs)
+				{
+                    if (obj.GetComponent<Collider>().bounds.Contains(new Vector3(i-25, 0 , j-25)))
+                    {
+                        grilleBase[i, j, 0] = int.MaxValue;
+                        //Instantiate(test, new Vector3(i - 25,0 ,j - 25 ), Quaternion.identity);
+                    }
+                }
+			}
+		}
 
-        grille[5, 8, 0] = int.MaxValue;
-        grille[5, 7, 0] = int.MaxValue;
-        grille[5, 6, 0] = int.MaxValue;
 
-        grille[6, 6, 0] = int.MaxValue;
-        grille[7, 6, 0] = int.MaxValue;
-        grille[8, 6, 0] = int.MaxValue;
-
-        grille[2, 9, 0] = int.MaxValue;
-
-        Vector3 posGentil = new Vector3(2, 2,0);
-        Vector3 posMechant = new Vector3(7, 7, 0);
-        algoastar(grille, posMechant, posGentil); //méchant vers gentil
-
+        InvokeRepeating("updateRoute", 1f, 2.5f);
+        InvokeRepeating("testinvoke", 1f, 0.3f);
     }
 
     // Update is called once per frame
     void Update()
     {
-        
+        if (jr.nbrobjet == 5)
+        {
+            CancelInvoke();
+            gameover.text = "Gagné !";
+            Debug.Log("Gagné");
+            jr.nbrobjet++;
+        }
+    }
+    void OnCollisionStay(Collision collision)
+    {
+        if (collision.gameObject.tag == "Player")
+        {
+            CancelInvoke();
+            gameover.text = "Game Over";
+            Debug.Log("Perdu");
+        }
     }
 
-	public List<Vector3> algoastar (float[,,] grille, Vector3 d, Vector3 a)
+
+    void testinvoke()
     {
+        //transform.position = Vector3.MoveTowards(transform.position, new Vector3(route[0].x - 25, 0, route[0].y - 25), 1 * Time.deltaTime);
+        if (route.Count > 0)
+        {
+            transform.position = new Vector3(route[0].x - 25, 0.05f, route[0].y - 25);
+            if (transform.position == new Vector3(route[0].x - 25, 0.05f, route[0].y - 25))
+            {
+                route.RemoveAt(0);
+            }
+        }
+    }
+
+    void updateRoute() {
+        route = algoastar(new Vector3(transform.position.x + 25, transform.position.z + 25, 0), new Vector3(joueur.transform.position.x + 25, joueur.transform.position.z + 25, 0));
+    }
+
+
+    void OnDrawGizmos()
+    {
+		foreach (var item in route)
+		{
+            Handles.Label(new Vector3(item.x - 25, 1, item.y - 25), cout[(int)item.x, (int)item.y, 0 ]+"");
+        }
+    }
+
+
+
+    public List<Vector3> algoastar (Vector3 d, Vector3 a)
+    {
+
         List<Vector3> listeouverte = new List<Vector3>(); //contient les positions encore à analyser
         List<Vector3> listefermee = new List<Vector3>(); // contient les voisins vérifiés, qui n'ont plus à être analysé
-        float[,,] cout = (float[,,])grille.Clone();
-        Vector3[,,] predecesseur = new Vector3[10,10,1];
+        float[,,] grille = (float[,,])grilleBase.Clone();
+        cout = new float[50, 50, 1];
+
+        Vector3[,,] predecesseur = new Vector3[50,50,1];
 
         listeouverte.Add(d);
-		while (listeouverte.Count>0)
+        while (listeouverte.Count>0)
 		{
+            if (listeouverte.Count <= 0)
+            {
+                Debug.Log(listeouverte.Count);
+            }
+
             //on prend la plus petite valeur dans la liste ouverte
             Vector3 lowest = lowestPrice(listeouverte, cout);
             //on déplace cette valeur dans la liste fermée
@@ -63,7 +121,6 @@ public class astar : MonoBehaviour
             //si cette valeur est la valeur d'arrivée, l'algo est terminé
             if (lowest == a)
             {
-                Debug.Log(grille[(int)lowest.x, (int)lowest.y, (int)lowest.z]);
                 break;
             }
             //pour toutes les positions adjacentes :
@@ -90,10 +147,12 @@ public class astar : MonoBehaviour
         //list des sommets du chemin le plus court
         List<Vector3> shortestPath = new List<Vector3>();
         Vector3 current = a;
-        while (current != d)
+        int count = 0;
+        while (current != d && count < 100)
         {
             shortestPath.Add(current);
             current = predecesseur[(int)current.x, (int)current.y, (int)current.z];
+            count++;
         }
         shortestPath.Reverse();
         return shortestPath;
@@ -104,18 +163,18 @@ public class astar : MonoBehaviour
 		try
 		{
             Vector3 minvct = list[0];
-            list.RemoveAt(0);
-            float min = grille[(int)minvct.x, (int)minvct.y, (int)minvct.z];
+            float min = cout[(int)list[0].x, (int)list[0].y, (int)list[0].z];
+            List<Vector3> listtest = new List<Vector3>(list);
+            listtest.RemoveAt(0);
 
-            foreach (var item in list)
+            foreach (var item in listtest)
             {
-                if (min > grille[(int)item.x, (int)item.y, (int)item.z])
+                if (min > cout[(int)item.x, (int)item.y, (int)item.z])
                 {
-                    min = grille[(int)item.x, (int)item.y, (int)item.z];
+                    min = cout[(int)item.x, (int)item.y, (int)item.z];
                     minvct = item;
                 }
             }
-
             return minvct;
         }
 		catch (System.Exception)

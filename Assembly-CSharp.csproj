@@ -54,6 +54,15 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Assets\Scripts\astar.cs" />
+    <Compile Include="Assets\Scripts\deplacement.cs" />
+    <Compile Include="Assets\Easy Primitive Animals\FarmEdition\Scripts\RotateStand.cs" />
+    <Compile Include="Assets\Easy Primitive Animals\FarmEdition\Scripts\AnimalController.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Assets\Bed &amp; Bath Furniture Pack\Documentation.txt" />
+    <None Include="Assets\Interior Asset\README.txt" />
+    <None Include="Assets\Interior Asset\Source\InteriorPlant\Cactus\Flower\Materials\Double Sided Transparent Diffuse Bump Cutout.shader" />
+    <None Include="Assets\Interior Asset\Source\InteriorPlant\Grass\Materials\Double Sided Transparent Diffuse Bump Cutout.shader" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="UnityEngine">

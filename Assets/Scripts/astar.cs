@@ -179,7 +179,7 @@ public class astar : MonoBehaviour
         }
 		catch (System.Exception)
 		{
-            Debug.Log("liste ouverte vide ou pas de cout !!");
+            Debug.Log("liste ouverte vide ou pas de cout");
 			throw;
 		}
         
